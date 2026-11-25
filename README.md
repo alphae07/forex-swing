@@ -1,27 +1,23 @@
-# Forex Swing Assistant V2 — GitHub Pages
+# Forex Swing Assistant V2 (GitHub Pages)
 
-Static, browser-run forex signal monitor. **Trading workflow is 5-minute triggers with 15-minute setup confirmation**, filtered by a daily EMA trend bias. It is not an H4 scanner.
+Static browser-based forex scanner for **Daily trend context + 15-minute setups + 5-minute triggers**. No server or build step is required.
 
-## Deploy to GitHub Pages
-1. Create a GitHub repository and upload all files from this folder to its root.
-2. In **Settings → Pages**, select **Deploy from a branch**, choose `main` and `/ (root)`, save.
-3. Wait for deployment; open the GitHub Pages URL shown there.
+## Publish to GitHub Pages
+1. Create a public repository.
+2. Upload these files to the repository root: `index.html`, `app.js`, `style.css`, `.nojekyll`, `README.md`.
+3. Open **Settings → Pages**.
+4. Set Source to **Deploy from a branch**, branch **main**, folder **/(root)** and Save.
+5. Wait for deployment to finish in Actions, then open the URL shown under Settings → Pages.
 
-No build step or server required. Scanning, settings, signal history, watchlist and Telegram credentials are stored in browser local storage. The tab must stay open for scanning and browser notifications. A browser notification permission is required.
+## Use
+- **Scan now**: fetch candles and scan the selected watchlist.
+- **All / Signals / BUY / SELL**: filter market cards.
+- **Enable browser alerts**: request notification permission.
+- **Settings**: watchlist, minimum confluence score, scan interval, manual news blackout UTC windows, and risk calculator.
+- Signals are saved in the browser's local storage. Browser alerts and scanning require this page to remain open.
 
-## Included in V2
-- Multi-timeframe: Daily trend bias + 15-minute confluence setup + 5-minute rejection/breakout trigger.
-- 28-symbol watchlist (majors, crosses, select exotics, metals). Change the watchlist in Settings.
-- Configurable minimum confluence score and scan frequency.
-- BUY/SELL, entry, stop, TP1/2/3 (1R/2R/3R), setup score and rationale.
-- Browser notifications, optional Telegram Bot notifications, persistent signal history.
-- Manual news blackout windows, risk calculator, local 24-hour session countdown.
-- GitHub Pages-compatible static site.
-
-## Data caveats
-This version retrieves Yahoo Finance chart data through a public CORS proxy (`corsproxy.io`) with a direct-fetch fallback. The proxy may be rate-limited, blocked, or unavailable; the app does not include a guaranteed market-data service. Symbols and data quality vary; XAU/XAG use futures proxies. **The original Pine indicator is approximated** with daily levels, pivots, 15m swing levels, round levels, clustering, and 5m trigger patterns, not executed by TradingView's Pine runtime.
-
-## Alerts/security
-Telegram credentials are saved locally in your browser and used directly to call the Telegram Bot API. Do not use a shared/public browser profile. A server-side Telegram relay is safer. GitHub Pages is static hosting and cannot run a persistent or 24-hour backend. This app's 24-hour timer is a browser session timer, not server shutdown.
-
-This is an alerting/analysis tool, not an auto-trader or financial advice. Confirm setups and sizing independently.
+## Data / limitations
+- The scanner requests Yahoo Finance chart data through a public CORS proxy. Public proxy and Yahoo data availability, rate limits, CORS behavior, symbol coverage and data freshness are not guaranteed. A market-data error will be shown in the market cards instead of silently hiding it.
+- GitHub Pages is static hosting. This app has no backend; settings/history are local to each browser/device. Telegram bot token/chat ID are stored in local browser storage and Telegram calls may be blocked by browser CORS. Do not use Telegram tokens on shared devices.
+- Trend calculation and confluence logic are simplified approximations of the source indicator, not a Pine Script runtime. Gold/silver futures symbols are used as proxies.
+- Informational only; not investment advice or automated trading.

@@ -21,3 +21,8 @@ Static browser-based forex scanner for **Daily trend context + 15-minute setups 
 - GitHub Pages is static hosting. This app has no backend; settings/history are local to each browser/device. Telegram bot token/chat ID are stored in local browser storage and Telegram calls may be blocked by browser CORS. Do not use Telegram tokens on shared devices.
 - Trend calculation and confluence logic are simplified approximations of the source indicator, not a Pine Script runtime. Gold/silver futures symbols are used as proxies.
 - Informational only; not investment advice or automated trading.
+
+
+### Market-data connectivity note
+
+This GitHub Pages-only build tries multiple public CORS relays to reach Yahoo Finance. Public relays can return 401/403, throttle, or go offline; this is not a guaranteed data feed. For reliable live scanning, use a small Cloudflare Worker or another server-side proxy with a reputable market-data provider. Yahoo Finance is unofficial and should not be treated as a stable API.

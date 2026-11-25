@@ -12,7 +12,30 @@ let scanBusy=false, timer=null, lastNotified=new Set(), sessionStart=Date.now(),
 function saveConfig(){localStorage.setItem('fxv2settings',JSON.stringify(cfg));}
 function showToast(text){const el=document.createElement('div');el.className='toast';el.textContent=text;document.body.appendChild(el);window.setTimeout(()=>el.remove(),5000)}
 function chartUrl(symbol, interval, range){return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&events=history`}
-async function getChart(symbol,interval,range){const url=chartUrl(symbol,interval,range);let data=null, errors=[];for(const candidate of [`https://corsproxy.io/?url=${encodeURIComponent(url)}`,url]){try{const res=await fetch(candidate,{signal:AbortSignal.timeout(12000)});if(!res.ok)throw Error(`HTTP ${res.status}`);const json=await res.json();const r=json?.chart?.result?.[0];if(!r)throw Error(json?.chart?.error?.description||'No market data');const q=r.indicators?.quote?.[0],ts=r.timestamp||[];if(!q)throw Error('Quote missing');data=ts.map((t,i)=>({t:t*1000,o:q.open?.[i],h:q.high?.[i],l:q.low?.[i],c:q.close?.[i]})).filter(c=>[c.o,c.h,c.l,c.c].every(Number.isFinite));if(data.length)break;throw Error('No valid candles');}catch(e){errors.push(e.message)}}if(!data?.length)throw Error(errors.join(' / ')||'Market data unavailable');return data}
+async function getChart(symbol,interval,range){
+  const url=chartUrl(symbol,interval,range); let data=null, errors=[];
+  // GitHub Pages cannot proxy requests itself. Try public CORS relays in sequence;
+  // the direct Yahoo request is intentionally omitted because browsers block it via CORS.
+  const candidates=[
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.org/?url=${encodeURIComponent(url)}`
+  ];
+  for(const candidate of candidates){
+    try{
+      const res=await fetch(candidate,{signal:AbortSignal.timeout(10000),cache:'no-store'});
+      if(!res.ok)throw Error(`Relay HTTP ${res.status}`);
+      const json=await res.json(); const r=json?.chart?.result?.[0];
+      if(!r)throw Error(json?.chart?.error?.description||'No market data in response');
+      const q=r.indicators?.quote?.[0],ts=r.timestamp||[]; if(!q)throw Error('Quote missing');
+      data=ts.map((t,i)=>({t:t*1000,o:q.open?.[i],h:q.high?.[i],l:q.low?.[i],c:q.close?.[i]})).filter(c=>[c.o,c.h,c.l,c.c].every(Number.isFinite));
+      if(data.length)break; throw Error('No valid candles');
+    }catch(e){errors.push(e.message);data=null;}
+  }
+  if(!data?.length)throw Error(`Market data blocked by public relays (${errors.join('; ')}). Try again later or configure a trusted data API/backend.`);
+  return data;
+}
 function ema(values,period){if(!values.length)return 0;const k=2/(period+1);let value=values[0];for(let i=1;i<values.length;i++)value=values[i]*k+value*(1-k);return value}
 function atr(candles,period=14){if(candles.length<2)return 0;const ranges=[];for(let i=1;i<candles.length;i++){const c=candles[i],p=candles[i-1].c;ranges.push(Math.max(c.h-c.l,Math.abs(c.h-p),Math.abs(c.l-p)))}const recent=ranges.slice(-period);return recent.reduce((a,b)=>a+b,0)/(recent.length||1)}
 function buildZones(candles,daily){const levels=[];const add=(price,label,weight=1)=>{if(Number.isFinite(price))levels.push({price,label,weight})};const prev=daily.at(-2);if(prev){add(prev.h,'Previous day high',2);add(prev.l,'Previous day low',2);add(prev.c,'Previous close',1);const p=(prev.h+prev.l+prev.c)/3;add(p,'Daily pivot',1);add(2*p-prev.l,'R1',1);add(2*p-prev.h,'S1',1)}for(let i=3;i<candles.length-3;i++){const slice=candles.slice(i-3,i+4);if(candles[i].h===Math.max(...slice.map(x=>x.h)))add(candles[i].h,'15m swing high',2);if(candles[i].l===Math.min(...slice.map(x=>x.l)))add(candles[i].l,'15m swing low',2)}const price=candles.at(-1).c,step=Math.pow(10,Math.floor(Math.log10(Math.abs(price)||1))-1);add(Math.round(price/step)*step,'Round number',1);levels.sort((a,b)=>a.price-b.price);const tolerance=atr(candles)*.3,zones=[];for(const lv of levels){let z=zones.at(-1);if(!z||lv.price-z.high>tolerance){z={low:lv.price,high:lv.price,levels:[]};zones.push(z)}z.low=Math.min(z.low,lv.price);z.high=Math.max(z.high,lv.price);z.levels.push(lv)}return zones.map(z=>({...z,mid:(z.low+z.high)/2,baseScore:z.levels.reduce((s,l)=>s+l.weight,0)*12}))}
